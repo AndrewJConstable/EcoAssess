@@ -1,0 +1,237 @@
+---
+title: "MEASO SST"
+author: "Andrew Constable"
+date: "2022-10-02"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r echo=FALES}
+library(raadtools)
+library(raadfiles)
+library(raster)
+
+```
+
+```{r functions, echo=FALSE}
+# return raster of mean SST for nominated month
+sst_m_mean<-function(mths # vector of numeric months from refMonths to generate rasters
+    ){
+  res<-sapply(mths,function(m){
+    yrs<-unique(Years[Months==refMonths[m]])
+    
+    
+    res_Yrs<-sapply(yrs,function(y,m){
+                                  a<-which((Years==y & Months==m))
+                                  s_sub<-readsst(dates[a], xylim = extent(Domain$Coords),varname="sst")
+                      return(mean(s_sub))
+                      },refMonths[m])
+
+     resYM<-brick(unlist(res_Yrs))
+     return(mean(resYM))
+           })
+  # create raster brick from res
+  return(brick(unlist(res)))
+    } # end function
+
+sst_month_mean_SD_brick<-function(m){
+    yrs<-unique(Years[Months==refMonths[m]])
+    
+    
+    res_Yrs<-sapply(yrs,function(y,m){
+                                  a<-which((Years==y & Months==m))
+                                  s_sub<-readsst(dates[a], xylim = extent(Domain$Coords),varname="sst")
+                      return(mean(s_sub))
+                      },refMonths[m])
+
+     resYM<-brick(unlist(res_Yrs))
+  return(brick(c(calc(resYM,mean),calc(resYM,sd))))
+  }
+  
+  
+  
+chla_m_mean<-function(mths # vector of numeric months from refMonths to generate rasters - note data is monthly
+    ){
+  res<-sapply(mths,function(m){
+                      yrs<-unique(Years[Months==refMonths[m]])
+                      a<-which((Years%in%yrs & Months==refMonths[m]))
+                      s_sub<-readCHL_month(dates[a], xylim = extent(Domain$Coords))
+                      return(mean(s_sub,na.rm=TRUE))
+                      })
+  # create raster brick from res
+  return(brick(unlist(res)))
+    } # end function
+
+
+# return raster of mean sea ice for nominated month
+cice_m_mean<-function(mths # vector of numeric months from refMonths to generate rasters
+    ){
+  res<-sapply(mths,function(m){
+    yrs<-unique(Years[Months==refMonths[m]])
+    
+    
+    res_Yrs<-sapply(yrs,function(y,m){
+                                  a<-which((Years==y & Months==m))
+                                  s_sub<-readice(dates[a])#, xylim = extent(Domain$Coords)) # polar projected data
+                      return(mean(s_sub))
+                      },refMonths[m])
+
+     resYM<-brick(unlist(res_Yrs))
+     return(mean(resYM))
+           })
+  # create raster brick from res
+  return(brick(unlist(res)))
+    } # end function
+
+```
+
+```{r inputs, echo=FALSE}
+# set domain to be sampled (LongMin,LongMax,LatMin,LatMax)
+
+Domain<-list(Coords=c(-180,180,-80,-40) ,Name="SO")
+
+# Domain<-list(Coords=c(-180,180,-80,-40), Name="MEASO")
+FileDir<-"/perm_storage/home/acon/"
+
+FilePrefixSST<-"SST"
+FilePrefixCICE<-"CICE"
+
+DaysStart<-as.Date("2010-07-01")
+DaysEnd  <-as.Date("2020-06-30")   
+
+refMonths<-c("01","02","03","04","05","06","07","08","09","10","11","12")
+MeanForMths<-c(1:12)
+```
+
+```{r SST_Month_mns, echo=FALSE}
+FilePrefix<-FilePrefixSST
+# set period of sampling data
+dates<-seq(DaysStart,DaysEnd,by="1 day")
+
+# vectors for subsetting
+Years<-format(dates,format="%Y")
+Months<-format(dates,format="%m")
+
+# reference years and months
+refYears<-unique(Years)
+
+for(m in MeanForMths){
+yrs<-unique(Years[Months==refMonths[MeanForMths[m]]])
+sst_m <- sst_m_mean(m)
+plot(sst_m)
+writeRaster(sst_m
+           ,filename=file.path(FileDir
+                               ,paste(FilePrefix,"_",Domain$Name,"_",refMonths[m],"_",yrs[1],"-",yrs[length(yrs)],".tif",sep=""))
+           ,prj=TRUE
+           ,format="GTiff"
+           ,overwrite=TRUE)
+} # end m loop
+
+
+```
+
+
+
+```{r SSTmnSD, echo=FALSE}
+
+dates<-seq(DaysStart,DaysEnd,by="1 day")
+
+# vectors for subsetting
+Years<-format(dates,format="%Y")
+Months<-format(dates,format="%m")
+
+# reference years and months
+refYears<-unique(Years)
+
+for(m in MeanForMths){
+
+yrs<-unique(Years[Months==refMonths[MeanForMths[m]]])
+
+sst_summary_m_res<- sst_month_mean_SD_brick(m)
+
+plot(sst_summary_m_res[[1]],main="Mean SST")
+plot(sst_summary_m_res[[2]],main="Standard Deviation SST")
+
+writeRaster(sst_m
+           ,filename=file.path(FileDir
+                               ,paste(FilePrefix,"_",Domain$Name,"_",refMonths[m],"_",yrs[1],"-",yrs[length(yrs)],".tif",sep=""))
+           ,prj=TRUE
+           ,format="GTiff"
+           ,overwrite=TRUE)
+#### } # end m loop
+
+```
+
+```{r CICE_Month_mns, echo=FALSE}
+FilePrefix<-FilePrefixCICE
+# set period of sampling data
+dates<-seq(DaysStart,DaysEnd,by="1 month")
+
+# vectors for subsetting
+Years<-format(dates,format="%Y")
+Months<-format(dates,format="%m")
+
+# reference years and months
+refYears<-unique(Years)
+
+for(m in MeanForMths){
+yrs<-unique(Years[Months==refMonths[MeanForMths[m]]])
+cice_m <- cice_m_mean(m)
+writeRaster(cice_m
+           ,filename=file.path(FileDir
+                               ,paste(FilePrefix,"_",Domain$Name,"_",refMonths[m],"_",yrs[1],"-",yrs[length(yrs)],".tif",sep=""))
+           ,prj=TRUE
+           ,format="GTiff"
+           ,overwrite=TRUE)
+} # end m loop
+
+
+# some old code
+plot(sst)
+maps::map(add = TRUE)
+
+ice <- readice("2019-01-01")
+plot(ice)
+```
+
+
+```{r Chla, echo=FALSE}
+FilePrefix<-"Chla"
+#Domain<-list(Coords=c(152,165,-60,-50) ,Name="Macquarie")
+Domain<-list(Coords=c(50,95,-65,-40) ,Name="Heard Island")
+FileDir<-"/perm_storage/home/acon/"
+
+DaysStart<-as.Date("2010-07-01")  # note only monthly data
+DaysEnd  <-as.Date("2020-06-01")
+
+refMonths<-c("01","02","03","04","05","06","07","08","09","10","11","12")
+MeanForMths<-c(11)
+
+dates<-seq(DaysStart,DaysEnd,by="1 month")
+
+# vectors for subsetting
+Years<-format(dates,format="%Y")
+Months<-format(dates,format="%m")
+
+# reference years and months
+refYears<-unique(Years)
+
+for(m in MeanForMths){
+yrs<-unique(Years[Months==refMonths[m]])
+chla_m <- chla_m_mean(m)
+plot(chla_m)
+writeRaster(chla_m
+           ,filename=file.path(FileDir
+                               ,paste(FilePrefix,"_",Domain$Name,"_",refMonths[m],"_",yrs[1],"-",yrs[length(yrs)],".tif",sep=""))
+           ,prj=TRUE
+           ,format="GTiff"
+           ,overwrite=TRUE)
+} # end m loop
+
+
+
+
+```

@@ -1,0 +1,30 @@
+---
+title: "KrillHabitat"
+author: "Andrew Constable"
+date: "3/19/2015"
+output: html_document
+---
+
+1. Copied file from Mike
+
+file.copy("/home/shared/transfer/krillpew2015-03-26/cprod_.Rdata","/home/acon/Habitat/cprod_.Rdata")
+
+2. Objects
+
+
+
+Calculate areas of polygons
+```{r echo=FALSE}
+setwd("/home/acon/Habitat")
+load("cprod_.Rdata")
+library(rgeos)
+library(rgdal)
+
+## area of the polygons in m2 
+## note that we reproject to equal area projection, but can discard that result once area is calculated)
+tmp1 <- spTransform(ssmu, CRS("+proj=laea +lat_0=-90"))
+ssmu$area_m2 <- gArea(tmp1,byid=TRUE)
+print(ssmu$area_m2)
+
+```
+
