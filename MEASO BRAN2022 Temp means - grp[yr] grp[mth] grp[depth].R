@@ -126,7 +126,7 @@ fnBRAN_TempMean<-function(
     rTempMns<-c(rTempMns,rTemplate)  
   }
   names(rTempMns)<-if(SplitDpthByMLD) c("Temp_MLD","Temp_Deep") else "Temp"
-  return(rTempMns)
+  return(rast(rTempMns))
 } # end function
 
 #########################################################################################################
@@ -156,8 +156,6 @@ dBins_BRAN<-c(   2.5,  7.5, 12.5, 17.51539, 22.66702
                  , 4509.18018)
 
 
-Yrs<-seq(2011,2020,1)
-Mths<-seq(1,1,1)
 Dpths<-c(0,1000) # use MLD when NA or when SplitDpthByMLD==TRUE
 SplitDpthByMLD<-TRUE
 
@@ -220,13 +218,13 @@ rm(NdBins,dBins_diff,depthBins_int,prev)
 flinkBRAN_MLD<-"/vsicurl/https://dapds00.nci.org.au/thredds/fileServer/gb6/BRAN/BRAN2020/month/ocean_mld_mth_"
 flinkBRAN_Temp<-"/vsicurl/https://dapds00.nci.org.au/thredds/fileServer/gb6/BRAN/BRAN2020/month/ocean_temp_mth_"
 
-Yrs<-2015
-mthNames<-sprintf("%02d",seq(1,1,1))
-for(m in seq(1,12,1)){
+Yrs<-seq(2011,2020,1)
+Mths<-seq(1,12,1)
+mthNames<-sprintf("%02d",Mths)
+for(m in Mths){
+  print(paste0("Start Time - Month ",mthNames[m],": ",Sys.time()))
 rTemp<-fnBRAN_TempMean(Yrs,m,Dpths,SplitDpthByMLD,dfDepths)
-writeRaster(rTemp,file=paste0("rTemp_",mthNames[m],".TIF",overwrite=TRUE))
+writeRaster(rTemp,file=paste0("rTemp_",mthNames[m],".tif"),overwrite=TRUE)
 } # end m
-
-
 
 
